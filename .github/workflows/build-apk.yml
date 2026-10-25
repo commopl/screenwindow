@@ -19,10 +19,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android API 34
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - name: Install Android API 34 from runner SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          if [ -z "$SDKMANAGER" ]; then echo "sdkmanager not found"; exit 1; fi
+          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0"
       - name: Set up Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
         with:
