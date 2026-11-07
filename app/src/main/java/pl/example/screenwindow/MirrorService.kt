@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.SurfaceTexture
@@ -245,12 +246,42 @@ class MirrorService : Service() {
             setPadding(dp(9), 0, 0, 0)
         }
         header.addView(handle, LinearLayout.LayoutParams(0, barHeight, 1f))
+        val bubble = TextView(this).apply {
+            text = "📷"
+            textSize = 25f
+            gravity = Gravity.CENTER
+            contentDescription = "Otwórz podgląd ekranu"
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.rgb(18, 45, 61))
+                setStroke(dp(2), Color.rgb(123, 224, 239))
+            }
+            visibility = View.GONE
+            setOnClickListener {
+                visibility = View.GONE
+                panel.visibility = View.VISIBLE
+                frame.setBackgroundColor(Color.rgb(6, 10, 15))
+                updateWindowSize((getDisplaySize().x * 0.55f).toInt())
+            }
+        }
+        header.addView(controlButton("📷") {
+            // Zwijamy tylko wizualny podgląd. TextureView i sesja MediaProjection
+            // pozostają w hierarchii, więc przechwytywanie nie jest zatrzymywane.
+            panel.visibility = View.INVISIBLE
+            bubble.visibility = View.VISIBLE
+            frame.setBackgroundColor(Color.TRANSPARENT)
+            layout.width = dp(60)
+            layout.height = dp(60)
+            clampWindowPosition()
+        })
         header.addView(controlButton("−") { updateWindowSize((layout.width * .82f).toInt()) })
         header.addView(controlButton("+") { updateWindowSize((layout.width * 1.22f).toInt()) })
         header.addView(controlButton("×") { stopSelf() })
         panel.addView(header, LinearLayout.LayoutParams(-1, barHeight))
         panel.addView(preview, LinearLayout.LayoutParams(-1, 0, 1f))
         frame.addView(panel, FrameLayout.LayoutParams(-1, -1))
+        frame.addView(bubble, FrameLayout.LayoutParams(dp(60), dp(60), Gravity.CENTER))
 
         layout = WindowManager.LayoutParams(
             initialWidth, barHeight + initialWidth * capturedHeight / capturedWidth,
@@ -358,6 +389,7 @@ class MirrorService : Service() {
         contentDescription = when (label) {
             "−" -> "Zmniejsz okno"
             "+" -> "Powiększ okno"
+            "📷" -> "Zwiń podgląd do pływającej ikonki"
             else -> "Zamknij podgląd"
         }
     }
