@@ -274,6 +274,7 @@ class MirrorService : Service() {
                 expandedWidth = layout.width
                 expandedHeight = layout.height
                 minimized = true
+                resizeHandles.forEach { it.visibility = View.GONE }
                 panel.visibility = View.INVISIBLE
                 bubble.visibility = View.VISIBLE
                 frame.setBackgroundColor(Color.TRANSPARENT)
@@ -292,6 +293,13 @@ class MirrorService : Service() {
 
         // Uchwyty zmiany rozmiaru jak w oknach Windows: cztery krawędzie i cztery narożniki.
         // Każdy uchwyt jest osobną strefą dotyku, a proporcje obrazu pozostają stałe.
+        var resizeStartX = 0f
+        var resizeStartY = 0f
+        var resizeStartLeft = 0
+        var resizeStartTop = 0
+        var resizeStartWidth = 0
+        var resizeStartHeight = 0
+        val resizeHandles = mutableListOf<View>()
         fun addResizeHandle(gravity: Int, horizontal: Int, vertical: Int, corner: Boolean) {
             val handle = View(this).apply {
                 setBackgroundColor(if (corner) 0xAA65C7D8.toInt() else 0x6665C7D8)
@@ -351,13 +359,8 @@ class MirrorService : Service() {
                 }
             }
             frame.addView(handle, lp)
+            resizeHandles.add(handle)
         }
-        var resizeStartX = 0f
-        var resizeStartY = 0f
-        var resizeStartLeft = 0
-        var resizeStartTop = 0
-        var resizeStartWidth = 0
-        var resizeStartHeight = 0
         addResizeHandle(Gravity.LEFT or Gravity.CENTER_VERTICAL, -1, 0, false)
         addResizeHandle(Gravity.RIGHT or Gravity.CENTER_VERTICAL, 1, 0, false)
         addResizeHandle(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, -1, false)
@@ -400,6 +403,7 @@ class MirrorService : Service() {
                 MotionEvent.ACTION_UP -> {
                     if (!bubbleMoved && minimized) {
                         minimized = false
+                        resizeHandles.forEach { it.visibility = View.VISIBLE }
                         bubble.visibility = View.GONE
                         panel.visibility = View.VISIBLE
                         frame.setBackgroundColor(Color.rgb(6, 10, 15))
