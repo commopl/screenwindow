@@ -36,8 +36,8 @@ class MainActivity : Activity() {
 
     private lateinit var qualitySpinner: Spinner
     private lateinit var roomCodeView: TextView
-    private var roomCode = ""
-    private val playerBase = "https://screenwindow-stream.dam-mniamx.workers.dev/?room="
+    private var roomCode = "00000000000000000000000000000001"
+    private val playerBase = "https://screenwindow-stream.dam-mniamx.workers.dev/public"
     private val qualityValues = floatArrayOf(0.40f, 0.60f, 0.80f)
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -99,7 +99,7 @@ class MainActivity : Activity() {
         root.addView(roomCodeView)
         root.addView(button("📋  KOPIUJ LINK ODTWARZACZA", 0xFF34465D.toInt()) {
             if (roomCode.isBlank()) createRoomCode()
-            val link = playerBase + roomCode
+            val link = playerBase
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("ScreenWindow player", link))
             Toast.makeText(this, "Skopiowano link odtwarzacza", Toast.LENGTH_SHORT).show()
@@ -141,7 +141,7 @@ class MainActivity : Activity() {
         SecureRandom().nextBytes(bytes)
         roomCode = bytes.joinToString("") { "%02x".format(it) }
         if (::roomCodeView.isInitialized) {
-            roomCodeView.text = "Kod: $roomCode\nLink: $playerBase$roomCode"
+            roomCodeView.text = "POKÓJ PUBLICZNY\nLink: $playerBase"
         }
     }
 
