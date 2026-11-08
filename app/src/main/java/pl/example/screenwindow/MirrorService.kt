@@ -60,7 +60,8 @@ class MirrorService : Service() {
         const val ACTION_STOP = "pl.example.screenwindow.STOP"
         const val EXTRA_CODE = "code"
         const val EXTRA_DATA = "data"
-        const val EXTRA_QUALITY = "quality"\n        const val EXTRA_ROOM = "room"
+        const val EXTRA_QUALITY = "quality"
+        const val EXTRA_ROOM = "room"
         private const val CHANNEL_ID = "mirror"
         private const val NOTIF_ID = 1
         private const val TAG = "ScreenWindow"
@@ -71,7 +72,14 @@ class MirrorService : Service() {
     private var callback: MediaProjection.Callback? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var previewSurface: Surface? = null
-    private var imageView: ImageView? = null\n    private var imageReader: ImageReader? = null\n    private var encoderThread: HandlerThread? = null\n    private var encoderHandler: Handler? = null\n    private var streamClient: OkHttpClient? = null\n    private var streamSocket: WebSocket? = null\n    private var streamRoom = ""\n    private var lastFrameTime = 0L
+    private var imageView: ImageView? = null
+    private var imageReader: ImageReader? = null
+    private var encoderThread: HandlerThread? = null
+    private var encoderHandler: Handler? = null
+    private var streamClient: OkHttpClient? = null
+    private var streamSocket: WebSocket? = null
+    private var streamRoom = ""
+    private var lastFrameTime = 0L
     private var overlay: FrameLayout? = null
     private lateinit var windowManager: WindowManager
     private lateinit var layout: WindowManager.LayoutParams
@@ -109,7 +117,9 @@ class MirrorService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        quality = intent.getFloatExtra(EXTRA_QUALITY, 0.6f).coerceIn(0.3f, 0.9f)\n        streamRoom = intent.getStringExtra(EXTRA_ROOM).orEmpty()\n        connectStream()
+        quality = intent.getFloatExtra(EXTRA_QUALITY, 0.6f).coerceIn(0.3f, 0.9f)
+        streamRoom = intent.getStringExtra(EXTRA_ROOM).orEmpty()
+        connectStream()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         screenDensityDpi = resources.displayMetrics.densityDpi
         val size = getDisplaySize()
