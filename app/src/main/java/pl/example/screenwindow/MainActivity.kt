@@ -3,6 +3,9 @@ package pl.example.screenwindow
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.ClipboardManager
+import android.content.ClipData
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
@@ -20,6 +23,7 @@ import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
+import java.security.SecureRandom
 
 /** Bez zewnętrznych bibliotek i bez przechowywania tokenów przechwytywania. */
 class MainActivity : Activity() {
@@ -31,6 +35,9 @@ class MainActivity : Activity() {
     }
 
     private lateinit var qualitySpinner: Spinner
+    private lateinit var roomCodeView: TextView
+    private var roomCode = ""
+    private val playerBase = "https://screenwindow-stream.dam-mniamx.workers.dev/?room="
     private val qualityValues = floatArrayOf(0.40f, 0.60f, 0.80f)
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -76,9 +83,30 @@ class MainActivity : Activity() {
         qualitySpinner.setSelection(previous.coerceIn(0, 2))
         root.addView(qualitySpinner, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(54)
-        ).apply { bottomMargin = dp(22) })
+        ).apply { bottomMargin = dp(18) })
 
-        root.addView(button("▶  URUCHOM PODGLĄD", 0xFF156C7E.toInt()) {
+        root.addView(TextView(this).apply {
+            text = "ODTWARZACZ ZDALNY"
+            textSize = 15f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+        })
+        roomCodeView = TextView(this).apply {
+            textSize = 13f
+            setTextColor(Color.rgb(123, 224, 239))
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        root.addView(roomCodeView)
+        root.addView(button("📋  KOPIUJ LINK ODTWARZACZA", 0xFF34465D.toInt()) {
+            if (roomCode.isBlank()) createRoomCode()
+            val link = playerBase + roomCode
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("ScreenWindow player", link))
+            Toast.makeText(this, "Skopiowano link odtwarzacza", Toast.LENGTH_SHORT).show()
+        })
+        createRoomCode()
+
+        root.addView(button("▶  URUCHOM PODGLĄD + TRANSMISJĘ", 0xFF156C7E.toInt()) {
             getSharedPreferences(PREFS, MODE_PRIVATE).edit()
                 .putInt("quality_index", qualitySpinner.selectedItemPosition).apply()
             startCaptureFlow()
@@ -106,6 +134,15 @@ class MainActivity : Activity() {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, dp(58)
         ).apply { bottomMargin = dp(12) }
+    }
+
+    private fun createRoomCode() {
+        val bytes = ByteArray(16)
+        SecureRandom().nextBytes(bytes)
+        roomCode = bytes.joinToString("") { "%02x".format(it) }
+        if (::roomCodeView.isInitialized) {
+            roomCodeView.text = "Kod: $roomCode\\nLink: $playerBase$roomCode"
+        }
     }
 
     private fun startCaptureFlow() {
@@ -160,7 +197,7 @@ class MainActivity : Activity() {
                     val serviceIntent = Intent(this, MirrorService::class.java)
                         .putExtra(MirrorService.EXTRA_CODE, resultCode)
                         .putExtra(MirrorService.EXTRA_DATA, data)
-                        .putExtra(MirrorService.EXTRA_QUALITY, qualityValues[selected])
+                        .putExtra(MirrorService.EXTRA_QUALITY, qualityValues[selected])\n                        .putExtra(MirrorService.EXTRA_ROOM, roomCode)
                     try {
                         startForegroundService(serviceIntent)
                         moveTaskToBack(true)
