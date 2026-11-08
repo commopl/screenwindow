@@ -25,3 +25,16 @@ Lokalnie: otwórz projekt w Android Studio lub użyj `gradle :app:assembleDebug`
 Aplikacja potrzebuje zgody na rysowanie nad innymi aplikacjami oraz każdorazowej zgody na przechwytywanie ekranu (MediaProjection). Zabezpieczona treść DRM może być czarna. Nie omija zabezpieczeń Androida.
 
 **Uwaga:** sukces kompilacji nie zastępuje testów działania na fizycznym telefonie.
+
+
+## Transmisja do odtwarzacza WWW
+
+Wydanie z transmisją używa osobnego Cloudflare Worker `screenwindow-stream`:
+- Odtwarzacz: https://screenwindow-stream.dam-mniamx.workers.dev/
+- Aplikacja generuje losowy, 128-bitowy kod pokoju i link do odtwarzacza.
+- Przycisk **Kopiuj link odtwarzacza** kopiuje adres do schowka.
+- Po uruchomieniu przechwytywania obraz jest wysyłany przez WebSocket (JPEG, około 8 kl./s) do pokoju, a odtwarzacz pokazuje bieżące klatki.
+- Kod pokoju jest sekretem dostępu. Nie publikuj go publicznie, jeśli transmisja ma być prywatna.
+- To jest przesyłanie obrazu ekranu do przeglądarki, nie systemowa wirtualna kamera Androida.
+
+Worker i Durable Object: `cloudflare/worker.js`, konfiguracja: `cloudflare/wrangler.jsonc`.
