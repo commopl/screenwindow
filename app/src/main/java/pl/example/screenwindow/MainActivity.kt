@@ -198,7 +198,8 @@ class MainActivity : Activity() {
                     val serviceIntent = Intent(this, MirrorService::class.java)
                         .putExtra(MirrorService.EXTRA_CODE, resultCode)
                         .putExtra(MirrorService.EXTRA_DATA, data)
-                        .putExtra(MirrorService.EXTRA_QUALITY, qualityValues[selected])\n                        .putExtra(MirrorService.EXTRA_ROOM, roomCode)
+                        .putExtra(MirrorService.EXTRA_QUALITY, qualityValues[selected])
+                        .putExtra(MirrorService.EXTRA_ROOM, roomCode)
                     try {
                         startForegroundService(serviceIntent)
                         moveTaskToBack(true)
