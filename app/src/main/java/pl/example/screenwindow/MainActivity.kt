@@ -23,7 +23,6 @@ import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
-import java.security.SecureRandom
 
 /** Bez zewnętrznych bibliotek i bez przechowywania tokenów przechwytywania. */
 class MainActivity : Activity() {
