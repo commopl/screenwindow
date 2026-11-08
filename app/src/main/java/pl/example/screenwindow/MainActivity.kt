@@ -141,12 +141,12 @@ class MainActivity : Activity() {
         SecureRandom().nextBytes(bytes)
         roomCode = bytes.joinToString("") { "%02x".format(it) }
         if (::roomCodeView.isInitialized) {
-            roomCodeView.text = "Kod: $roomCode\\nLink: $playerBase$roomCode"
+            roomCodeView.text = "Kod: $roomCode\nLink: $playerBase$roomCode"
         }
     }
 
     private fun startCaptureFlow() {
-        if (!Settings.canDrawOverlays(this)) {
+        if (roomCode.isBlank()) createRoomCode()\n        if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(this, "Zezwól na wyświetlanie nad innymi aplikacjami", Toast.LENGTH_LONG).show()
             @Suppress("DEPRECATION")
             startActivityForResult(
