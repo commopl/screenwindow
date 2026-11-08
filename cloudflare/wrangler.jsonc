@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.cloudflare.com/wrangler/config-schema.json",
+  "name": "screenwindow-stream",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-08",
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOMS", "class_name": "RoomHub" }
+    ]
+  },
+  "exports": {
+    "RoomHub": { "type": "durable-object", "storage": "sqlite" }
+  }
+}
