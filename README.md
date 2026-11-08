@@ -31,10 +31,10 @@ Aplikacja potrzebuje zgody na rysowanie nad innymi aplikacjami oraz każdorazowe
 
 Wydanie z transmisją używa osobnego Cloudflare Worker `screenwindow-stream`:
 - Odtwarzacz: https://screenwindow-stream.dam-mniamx.workers.dev/
-- Aplikacja generuje losowy, 128-bitowy kod pokoju i link do odtwarzacza.
-- Przycisk **Kopiuj link odtwarzacza** kopiuje adres do schowka.
+- Aplikacja nadaje do jednego stałego, publicznego pokoju: `/public`.
+- Przycisk **Kopiuj link odtwarzacza** kopiuje stały publiczny adres: https://screenwindow-stream.dam-mniamx.workers.dev/public.
 - Po uruchomieniu przechwytywania obraz jest wysyłany przez WebSocket (JPEG, około 8 kl./s) do pokoju, a odtwarzacz pokazuje bieżące klatki.
-- Kod pokoju jest sekretem dostępu. Nie publikuj go publicznie, jeśli transmisja ma być prywatna.
+- Pokój jest publiczny: każdy, kto zna adres, może oglądać transmisję. Nie jest wymagany kod ani zaproszenie. Nie pokazuj prywatnych danych na ekranie.
 - To jest przesyłanie obrazu ekranu do przeglądarki, nie systemowa wirtualna kamera Androida.
 
 Worker i Durable Object: `cloudflare/worker.js`, konfiguracja: `cloudflare/wrangler.jsonc`.
