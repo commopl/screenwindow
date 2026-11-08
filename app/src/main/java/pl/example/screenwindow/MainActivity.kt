@@ -137,9 +137,7 @@ class MainActivity : Activity() {
     }
 
     private fun createRoomCode() {
-        val bytes = ByteArray(16)
-        SecureRandom().nextBytes(bytes)
-        roomCode = bytes.joinToString("") { "%02x".format(it) }
+        roomCode = "00000000000000000000000000000001"
         if (::roomCodeView.isInitialized) {
             roomCodeView.text = "POKÓJ PUBLICZNY\nLink: $playerBase"
         }
