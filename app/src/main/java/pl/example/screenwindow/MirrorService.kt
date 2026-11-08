@@ -290,6 +290,83 @@ class MirrorService : Service() {
         frame.addView(panel, FrameLayout.LayoutParams(-1, -1))
         frame.addView(bubble, FrameLayout.LayoutParams(dp(58), dp(58), Gravity.CENTER))
 
+        // Uchwyty zmiany rozmiaru jak w oknach Windows: cztery krawędzie i cztery narożniki.
+        // Każdy uchwyt jest osobną strefą dotyku, a proporcje obrazu pozostają stałe.
+        fun addResizeHandle(gravity: Int, horizontal: Int, vertical: Int, corner: Boolean) {
+            val handle = View(this).apply {
+                setBackgroundColor(if (corner) 0xAA65C7D8.toInt() else 0x6665C7D8)
+                contentDescription = "Zmień rozmiar okna"
+            }
+            val thickness = dp(if (corner) 24 else 15)
+            val lp = FrameLayout.LayoutParams(
+                if (horizontal == 0) thickness else if (corner) thickness else -1,
+                if (vertical == 0) thickness else if (corner) thickness else -1,
+                gravity
+            )
+            if (horizontal == 0) lp.width = thickness else lp.height = thickness
+            if (corner) {
+                lp.width = thickness
+                lp.height = thickness
+            } else if (horizontal != 0) {
+                lp.height = thickness
+            } else {
+                lp.width = thickness
+            }
+            handle.setOnTouchListener { _, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        resizeStartX = event.rawX
+                        resizeStartY = event.rawY
+                        resizeStartLeft = layout.x
+                        resizeStartTop = layout.y
+                        resizeStartWidth = layout.width
+                        resizeStartHeight = layout.height
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = event.rawX - resizeStartX
+                        val dy = event.rawY - resizeStartY
+                        val ratio = capturedWidth.toFloat() / capturedHeight
+                        val widthDelta = when {
+                            horizontal < 0 -> -dx
+                            horizontal > 0 -> dx
+                            vertical < 0 -> -dy * ratio
+                            vertical > 0 -> dy * ratio
+                            else -> 0f
+                        }
+                        val heightDriven = vertical != 0
+                        val requested = if (corner && heightDriven) {
+                            resizeStartWidth + (if (vertical < 0) -dy * ratio else dy * ratio).toInt()
+                        } else {
+                            resizeStartWidth + widthDelta.toInt()
+                        }
+                        updateWindowSize(requested)
+                        if (horizontal < 0) layout.x = resizeStartLeft + resizeStartWidth - layout.width
+                        if (vertical < 0) layout.y = resizeStartTop + resizeStartHeight - layout.height
+                        clampWindowPosition()
+                        true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> true
+                    else -> false
+                }
+            }
+            frame.addView(handle, lp)
+        }
+        var resizeStartX = 0f
+        var resizeStartY = 0f
+        var resizeStartLeft = 0
+        var resizeStartTop = 0
+        var resizeStartWidth = 0
+        var resizeStartHeight = 0
+        addResizeHandle(Gravity.LEFT or Gravity.CENTER_VERTICAL, -1, 0, false)
+        addResizeHandle(Gravity.RIGHT or Gravity.CENTER_VERTICAL, 1, 0, false)
+        addResizeHandle(Gravity.TOP or Gravity.CENTER_HORIZONTAL, 0, -1, false)
+        addResizeHandle(Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, 1, false)
+        addResizeHandle(Gravity.TOP or Gravity.LEFT, -1, -1, true)
+        addResizeHandle(Gravity.TOP or Gravity.RIGHT, 1, -1, true)
+        addResizeHandle(Gravity.BOTTOM or Gravity.LEFT, -1, 1, true)
+        addResizeHandle(Gravity.BOTTOM or Gravity.RIGHT, 1, 1, true)
+
         // Przesuwanie ikonki. Krótkie dotknięcie przywraca okno w poprzednim miejscu i rozmiarze.
         var bubbleDownX = 0f
         var bubbleDownY = 0f
