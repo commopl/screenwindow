@@ -63,7 +63,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/' || url.pathname === '/watch') return new Response(PLAYER_HTML, {headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}});
-    const match = url.pathname.match(/^\\/ws\\/([a-f0-9]{32})$/i);
+    const match = url.pathname.match(/^\/ws\/([a-f0-9]{32})$/i);
     if (!match) return new Response('ScreenWindow stream server', {headers:{'content-type':'text/plain'}});
     const room = match[1].toLowerCase();
     const id = env.ROOMS.idFromName(room);
