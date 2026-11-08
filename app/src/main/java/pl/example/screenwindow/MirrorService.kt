@@ -335,19 +335,21 @@ class MirrorService : Service() {
                         val dx = event.rawX - resizeStartX
                         val dy = event.rawY - resizeStartY
                         val ratio = capturedWidth.toFloat() / capturedHeight
-                        val widthDelta = when {
-                            horizontal < 0 -> -dx
-                            horizontal > 0 -> dx
-                            vertical < 0 -> -dy * ratio
-                            vertical > 0 -> dy * ratio
+                        val widthDeltaX = when (horizontal) {
+                            -1 -> -dx
+                            1 -> dx
                             else -> 0f
                         }
-                        val heightDriven = vertical != 0
-                        val requested = if (corner && heightDriven) {
-                            resizeStartWidth + (if (vertical < 0) -dy * ratio else dy * ratio).toInt()
-                        } else {
-                            resizeStartWidth + widthDelta.toInt()
+                        val widthDeltaY = when (vertical) {
+                            -1 -> -dy * ratio
+                            1 -> dy * ratio
+                            else -> 0f
                         }
+                        // W narożniku reagujemy na silniejszy z dwóch kierunków przeciągania.
+                        val widthDelta = if (corner) {
+                            if (kotlin.math.abs(widthDeltaX) >= kotlin.math.abs(widthDeltaY)) widthDeltaX else widthDeltaY
+                        } else if (horizontal != 0) widthDeltaX else widthDeltaY
+                        val requested = resizeStartWidth + widthDelta.toInt()
                         updateWindowSize(requested)
                         if (horizontal < 0) layout.x = resizeStartLeft + resizeStartWidth - layout.width
                         if (vertical < 0) layout.y = resizeStartTop + resizeStartHeight - layout.height
