@@ -10,6 +10,17 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Bitmap
+import android.media.ImageReader
+import android.os.SystemClock
+import android.os.HandlerThread
+import java.io.ByteArrayOutputStream
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okio.ByteString
 import android.graphics.drawable.GradientDrawable
 import android.graphics.PixelFormat
 import android.graphics.Point
@@ -32,6 +43,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -48,7 +60,7 @@ class MirrorService : Service() {
         const val ACTION_STOP = "pl.example.screenwindow.STOP"
         const val EXTRA_CODE = "code"
         const val EXTRA_DATA = "data"
-        const val EXTRA_QUALITY = "quality"
+        const val EXTRA_QUALITY = "quality"\n        const val EXTRA_ROOM = "room"
         private const val CHANNEL_ID = "mirror"
         private const val NOTIF_ID = 1
         private const val TAG = "ScreenWindow"
@@ -59,7 +71,7 @@ class MirrorService : Service() {
     private var callback: MediaProjection.Callback? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var previewSurface: Surface? = null
-    private var textureView: TextureView? = null
+    private var imageView: ImageView? = null\n    private var imageReader: ImageReader? = null\n    private var encoderThread: HandlerThread? = null\n    private var encoderHandler: Handler? = null\n    private var streamClient: OkHttpClient? = null\n    private var streamSocket: WebSocket? = null\n    private var streamRoom = ""\n    private var lastFrameTime = 0L
     private var overlay: FrameLayout? = null
     private lateinit var windowManager: WindowManager
     private lateinit var layout: WindowManager.LayoutParams
@@ -97,7 +109,7 @@ class MirrorService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        quality = intent.getFloatExtra(EXTRA_QUALITY, 0.6f).coerceIn(0.3f, 0.9f)
+        quality = intent.getFloatExtra(EXTRA_QUALITY, 0.6f).coerceIn(0.3f, 0.9f)\n        streamRoom = intent.getStringExtra(EXTRA_ROOM).orEmpty()\n        connectStream()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         screenDensityDpi = resources.displayMetrics.densityDpi
         val size = getDisplaySize()
@@ -183,10 +195,10 @@ class MirrorService : Service() {
         updateCaptureDimensions(width, height)
         if (oldWidth == capturedWidth && oldHeight == capturedHeight) return
         try {
-            textureView?.surfaceTexture?.setDefaultBufferSize(capturedWidth, capturedHeight)
+            setupCaptureReader()
             virtualDisplay?.resize(capturedWidth, capturedHeight, screenDensityDpi)
-            virtualDisplay?.setSurface(previewSurface)
-            updateWindowSize(layout.width)
+            virtualDisplay?.setSurface(imageReader?.surface)
+            if (::layout.isInitialized) updateWindowSize(layout.width)
         } catch (e: RuntimeException) {
             Log.w(TAG, "Resize failed", e)
         }
@@ -475,46 +487,96 @@ class MirrorService : Service() {
             true
         }
 
-        preview.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-                surfaceTexture.setDefaultBufferSize(capturedWidth, capturedHeight)
-                val surface = Surface(surfaceTexture)
-                previewSurface?.release()
-                previewSurface = surface
-                try {
-                    val vd = virtualDisplay
-                    when {
-                        vd != null -> vd.setSurface(surface)
-                        !captureStarted -> {
-                            // Na Androidzie 14+ createVirtualDisplay wolno wywołać tylko JEDEN raz.
-                            captureStarted = true
-                            virtualDisplay = projection?.createVirtualDisplay(
-                                "ScreenWindow", capturedWidth, capturedHeight,
-                                screenDensityDpi,
-                                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                                surface, null, handler
-                            )
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Creating virtual display failed", e)
-                    Toast.makeText(this@MirrorService, "Błąd obrazu: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                    stopSelf()
-                }
-            }
-            override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-                // Wirtualny ekran trzyma własną rozdzielczość, TextureView skaluje podgląd.
-            }
-            override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
-                runCatching { virtualDisplay?.setSurface(null) }
-                previewSurface?.release()
-                previewSurface = null
-                return true
-            }
-            override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) = Unit
-        }
         windowManager.addView(frame, layout)
         updateWindowSize(initialWidth)
+    }
+
+    private fun connectStream() {
+        if (!streamRoom.matches(Regex("[a-fA-F0-9]{32}"))) {
+            Log.w(TAG, "Invalid stream room code; remote streaming disabled")
+            return
+        }
+        val client = OkHttpClient.Builder().pingInterval(20, java.util.concurrent.TimeUnit.SECONDS).build()
+        streamClient = client
+        val request = Request.Builder()
+            .url("wss://screenwindow-stream.dam-mniamx.workers.dev/ws/$streamRoom?role=publish")
+            .build()
+        streamSocket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                Log.i(TAG, "Remote player connected")
+            }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                Log.e(TAG, "Stream connection failed", t)
+            }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                Log.i(TAG, "Stream socket closed: $reason")
+            }
+        })
+    }
+
+    private fun setupCaptureReader() {
+        if (stopping) return
+        val thread = encoderThread ?: HandlerThread("ScreenWindowEncoder").also {
+            it.start()
+            encoderThread = it
+            encoderHandler = Handler(it.looper)
+        }
+        val reader = ImageReader.newInstance(
+            capturedWidth, capturedHeight, PixelFormat.RGBA_8888, 2
+        )
+        reader.setOnImageAvailableListener({ source ->
+            val image = try { source.acquireLatestImage() } catch (_: Exception) { null } ?: return@setOnImageAvailableListener
+            try {
+                val plane = image.planes[0]
+                val pixelStride = plane.pixelStride
+                val rowStride = plane.rowStride
+                val paddedWidth = (rowStride / pixelStride).coerceAtLeast(image.width)
+                val padded = Bitmap.createBitmap(paddedWidth, image.height, Bitmap.Config.ARGB_8888)
+                val buffer = plane.buffer
+                buffer.rewind()
+                padded.copyPixelsFromBuffer(buffer)
+                val frame = if (paddedWidth == image.width) padded else {
+                    Bitmap.createBitmap(padded, 0, 0, image.width, image.height).also { padded.recycle() }
+                }
+                val now = SystemClock.elapsedRealtime()
+                if (now - lastFrameTime >= 125L) {
+                    lastFrameTime = now
+                    val output = ByteArrayOutputStream()
+                    var qualityJpeg = 58
+                    frame.compress(Bitmap.CompressFormat.JPEG, qualityJpeg, output)
+                    while (output.size() > 560_000 && qualityJpeg > 32) {
+                        output.reset()
+                        qualityJpeg -= 8
+                        frame.compress(Bitmap.CompressFormat.JPEG, qualityJpeg, output)
+                    }
+                    val bytes = output.toByteArray()
+                    if (bytes.size <= 600_000) {
+                        streamSocket?.send(ByteString.of(*bytes))
+                    }
+                    handler.post { imageView?.setImageBitmap(frame) }
+                } else {
+                    frame.recycle()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Frame conversion failed", e)
+            } finally {
+                image.close()
+            }
+        }, encoderHandler)
+        val old = imageReader
+        imageReader = reader
+        old?.setOnImageAvailableListener(null, null)
+        runCatching { old?.close() }
+        if (virtualDisplay == null && !captureStarted) {
+            captureStarted = true
+            virtualDisplay = projection?.createVirtualDisplay(
+                "ScreenWindow", capturedWidth, capturedHeight, screenDensityDpi,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                reader.surface, null, handler
+            )
+        } else {
+            virtualDisplay?.setSurface(reader.surface)
+        }
     }
 
     private fun controlButton(label: String, action: () -> Unit): TextView = TextView(this).apply {
@@ -548,7 +610,7 @@ class MirrorService : Service() {
             if (::windowManager.isInitialized) runCatching { windowManager.removeViewImmediate(box) }
         }
         overlay = null
-        textureView = null
+        imageView = null
         super.onDestroy()
     }
 }
