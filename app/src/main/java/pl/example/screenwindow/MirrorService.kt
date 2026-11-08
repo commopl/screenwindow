@@ -29,6 +29,7 @@ import android.view.ScaleGestureDetector
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -69,6 +70,11 @@ class MirrorService : Service() {
     private var captureStarted = false
     private var stopping = false
     private var barHeight = 0
+    private var minimized = false
+    private var expandedX = 0
+    private var expandedY = 0
+    private var expandedWidth = 0
+    private var expandedHeight = 0
 
     private fun dp(px: Int) = (px * resources.displayMetrics.density).toInt()
 
@@ -258,22 +264,23 @@ class MirrorService : Service() {
                 setStroke(dp(2), Color.rgb(123, 224, 239))
             }
             visibility = View.GONE
-            setOnClickListener {
-                visibility = View.GONE
-                panel.visibility = View.VISIBLE
-                frame.setBackgroundColor(Color.rgb(6, 10, 15))
-                updateWindowSize((getDisplaySize().x * 0.55f).toInt())
-            }
+            // Ikona pozostaje niezależnym, przesuwalnym uchwytem po minimalizacji.
         }
-        header.addView(controlButton("📷") {
-            // Zwijamy tylko wizualny podgląd. TextureView i sesja MediaProjection
-            // pozostają w hierarchii, więc przechwytywanie nie jest zatrzymywane.
-            panel.visibility = View.INVISIBLE
-            bubble.visibility = View.VISIBLE
-            frame.setBackgroundColor(Color.TRANSPARENT)
-            layout.width = dp(60)
-            layout.height = dp(60)
-            clampWindowPosition()
+        header.addView(controlButton("▁") {
+            // Zapamiętujemy geometrię okna. Samo przechwytywanie i Surface pozostają aktywne.
+            if (!minimized) {
+                expandedX = layout.x
+                expandedY = layout.y
+                expandedWidth = layout.width
+                expandedHeight = layout.height
+                minimized = true
+                panel.visibility = View.INVISIBLE
+                bubble.visibility = View.VISIBLE
+                frame.setBackgroundColor(Color.TRANSPARENT)
+                layout.width = dp(58)
+                layout.height = dp(58)
+                clampWindowPosition()
+            }
         })
         header.addView(controlButton("−") { updateWindowSize((layout.width * .82f).toInt()) })
         header.addView(controlButton("+") { updateWindowSize((layout.width * 1.22f).toInt()) })
@@ -281,7 +288,56 @@ class MirrorService : Service() {
         panel.addView(header, LinearLayout.LayoutParams(-1, barHeight))
         panel.addView(preview, LinearLayout.LayoutParams(-1, 0, 1f))
         frame.addView(panel, FrameLayout.LayoutParams(-1, -1))
-        frame.addView(bubble, FrameLayout.LayoutParams(dp(60), dp(60), Gravity.CENTER))
+        frame.addView(bubble, FrameLayout.LayoutParams(dp(58), dp(58), Gravity.CENTER))
+
+        // Przesuwanie ikonki. Krótkie dotknięcie przywraca okno w poprzednim miejscu i rozmiarze.
+        var bubbleDownX = 0f
+        var bubbleDownY = 0f
+        var bubbleOriginX = 0
+        var bubbleOriginY = 0
+        var bubbleMoved = false
+        val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
+        bubble.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    bubbleDownX = event.rawX
+                    bubbleDownY = event.rawY
+                    bubbleOriginX = layout.x
+                    bubbleOriginY = layout.y
+                    bubbleMoved = false
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = event.rawX - bubbleDownX
+                    val dy = event.rawY - bubbleDownY
+                    if (kotlin.math.abs(dx) > touchSlop || kotlin.math.abs(dy) > touchSlop) {
+                        bubbleMoved = true
+                    }
+                    if (bubbleMoved) {
+                        layout.x = bubbleOriginX + dx.toInt()
+                        layout.y = bubbleOriginY + dy.toInt()
+                        clampWindowPosition()
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!bubbleMoved && minimized) {
+                        minimized = false
+                        bubble.visibility = View.GONE
+                        panel.visibility = View.VISIBLE
+                        frame.setBackgroundColor(Color.rgb(6, 10, 15))
+                        layout.x = expandedX
+                        layout.y = expandedY
+                        layout.width = expandedWidth
+                        layout.height = expandedHeight
+                        clampWindowPosition()
+                    }
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> true
+                else -> false
+            }
+        }
 
         layout = WindowManager.LayoutParams(
             initialWidth, barHeight + initialWidth * capturedHeight / capturedWidth,
@@ -389,7 +445,7 @@ class MirrorService : Service() {
         contentDescription = when (label) {
             "−" -> "Zmniejsz okno"
             "+" -> "Powiększ okno"
-            "📷" -> "Zwiń podgląd do pływającej ikonki"
+            "▁" -> "Minimalizuj do pływającej ikonki"
             else -> "Zamknij podgląd"
         }
     }

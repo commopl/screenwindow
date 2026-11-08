@@ -1,17 +1,17 @@
-# ScreenWindow 1.1
+# ScreenWindow 1.2
 
 Aplikacja Android 8+ napisana w Kotlinie: podgląd ekranu w pływającym oknie nad innymi aplikacjami.
 
 **Repozytorium projektu:** `commopl/screenwindow` (prywatne).
 
 ## Funkcje
-- Pływający podgląd ekranu z paskiem do przesuwania, przyciskami +, −, × i gestem szczypania.
+- Pływający podgląd ekranu z paskiem do przesuwania, przyciskami minimalizacji, +, −, × i gestem szczypania. Minimalizacja zachowuje sesję przechwytywania, a półprzezroczystą ikonę można przesuwać; dotknięcie przywraca poprzedni rozmiar i położenie.
 - Jakość przechwytywania 40%, 60% lub 80%.
 - Obsługa obrotu ekranu i zmiany rozmiaru przy pojedynczej sesji MediaProjection (Android 14+).
 - Powiadomienie z akcją zatrzymania.
 
 ## Pobieranie APK
-Po udanym buildzie wejdź do **Releases** i pobierz `ScreenWindow-v1.1-debug.apk`.
+Po udanym buildzie wejdź do **Releases** i pobierz `ScreenWindow-v1.2-debug.apk`.
 Alternatywnie otwórz **Actions → Build ScreenWindow APK → najnowszy udany przebieg → Artifacts**.
 Wydanie jest testowe: plik debug APK służy do instalacji i testowania, nie jest podpisaną wersją produkcyjną.
 
