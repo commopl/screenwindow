@@ -255,8 +255,11 @@ class MirrorService : Service() {
         val initialWidth = (size.x * 0.55f).toInt().coerceAtLeast(dp(240))
         val frame = FrameLayout(this).apply { setBackgroundColor(Color.rgb(6, 10, 15)) }
         overlay = frame
-        val preview = TextureView(this).apply { isOpaque = true }
-        textureView = preview
+        val preview = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setBackgroundColor(Color.BLACK)
+        }
+        imageView = preview
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.BLACK)
