@@ -1,4 +1,4 @@
-# ScreenWindow 1.2
+# ScreenWindow 1.3
 
 Aplikacja Android 8+ napisana w Kotlinie: podgląd ekranu w pływającym oknie nad innymi aplikacjami.
 
@@ -11,7 +11,7 @@ Aplikacja Android 8+ napisana w Kotlinie: podgląd ekranu w pływającym oknie n
 - Powiadomienie z akcją zatrzymania.
 
 ## Pobieranie APK
-Po udanym buildzie wejdź do **Releases** i pobierz `ScreenWindow-v1.2-debug.apk`.
+Po udanym buildzie wejdź do **Releases** i pobierz `ScreenWindow-v1.3-debug.apk`.
 Alternatywnie otwórz **Actions → Build ScreenWindow APK → najnowszy udany przebieg → Artifacts**.
 Wydanie jest testowe: plik debug APK służy do instalacji i testowania, nie jest podpisaną wersją produkcyjną.
 

@@ -34,20 +34,20 @@ jobs:
       - name: Prepare APK for distribution
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/ScreenWindow-v1.2-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/ScreenWindow-v1.3-debug.apk
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ScreenWindow-v1.2-debug-apk
-          path: dist/ScreenWindow-v1.2-debug.apk
+          name: ScreenWindow-v1.3-debug-apk
+          path: dist/ScreenWindow-v1.3-debug.apk
           if-no-files-found: error
       - name: Publish prerelease APK
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v1.2-debug >/dev/null 2>&1; then
-            gh release upload v1.2-debug dist/ScreenWindow-v1.2-debug.apk --clobber
+          if gh release view v1.3-debug >/dev/null 2>&1; then
+            gh release upload v1.3-debug dist/ScreenWindow-v1.3-debug.apk --clobber
           else
-            gh release create v1.2-debug dist/ScreenWindow-v1.2-debug.apk --target "$GITHUB_SHA" --title "ScreenWindow 1.2 (APK testowy)" --notes "Android debug APK do testów. Zgoda na przechwytywanie ekranu jest wymagana przez Androida." --prerelease
+            gh release create v1.3-debug dist/ScreenWindow-v1.3-debug.apk --target "$GITHUB_SHA" --title "ScreenWindow 1.3 (APK testowy)" --notes "Android debug APK do testów. Zgoda na przechwytywanie ekranu jest wymagana przez Androida." --prerelease
           fi
