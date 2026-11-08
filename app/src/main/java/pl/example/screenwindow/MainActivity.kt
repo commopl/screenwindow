@@ -146,7 +146,8 @@ class MainActivity : Activity() {
     }
 
     private fun startCaptureFlow() {
-        if (roomCode.isBlank()) createRoomCode()\n        if (!Settings.canDrawOverlays(this)) {
+        if (roomCode.isBlank()) createRoomCode()
+        if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(this, "Zezwól na wyświetlanie nad innymi aplikacjami", Toast.LENGTH_LONG).show()
             @Suppress("DEPRECATION")
             startActivityForResult(
