@@ -252,6 +252,7 @@ class MirrorService : Service() {
             setPadding(dp(9), 0, 0, 0)
         }
         header.addView(handle, LinearLayout.LayoutParams(0, barHeight, 1f))
+        val resizeHandles = mutableListOf<View>()
         val bubble = TextView(this).apply {
             text = "📷"
             textSize = 25f
@@ -299,7 +300,6 @@ class MirrorService : Service() {
         var resizeStartTop = 0
         var resizeStartWidth = 0
         var resizeStartHeight = 0
-        val resizeHandles = mutableListOf<View>()
         fun addResizeHandle(gravity: Int, horizontal: Int, vertical: Int, corner: Boolean) {
             val handle = View(this).apply {
                 setBackgroundColor(if (corner) 0xAA65C7D8.toInt() else 0x6665C7D8)
