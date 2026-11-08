@@ -1,4 +1,4 @@
-# ScreenWindow 1.3
+# ScreenWindow 1.4
 
 Aplikacja Android 8+ napisana w Kotlinie: podgląd ekranu w pływającym oknie nad innymi aplikacjami.
 
