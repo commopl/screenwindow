@@ -15,6 +15,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import java.security.SecureRandom
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Button
@@ -35,8 +36,9 @@ class MainActivity : Activity() {
 
     private lateinit var qualitySpinner: Spinner
     private lateinit var roomCodeView: TextView
-    private var roomCode = "00000000000000000000000000000001"
-    private val playerBase = "https://screenwindow-stream.dam-mniamx.workers.dev/public"
+    private var roomCode = ""
+    private val playerBase = "https://screenwindow-stream.dam-mniamx.workers.dev/watch?room="
+    private val snapshotBase = "https://screenwindow-stream.dam-mniamx.workers.dev/snapshot/"
     private val qualityValues = floatArrayOf(0.40f, 0.60f, 0.80f)
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
@@ -98,10 +100,17 @@ class MainActivity : Activity() {
         root.addView(roomCodeView)
         root.addView(button("📋  KOPIUJ LINK ODTWARZACZA", 0xFF34465D.toInt()) {
             if (roomCode.isBlank()) createRoomCode()
-            val link = playerBase
+            val link = playerBase + roomCode
             val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("ScreenWindow player", link))
             Toast.makeText(this, "Skopiowano link odtwarzacza", Toast.LENGTH_SHORT).show()
+        })
+        root.addView(button("📋  KOPIUJ LINK DLA MIRY (KLATKA)", 0xFF34465D.toInt()) {
+            if (roomCode.isBlank()) createRoomCode()
+            val link = snapshotBase + roomCode + ".jpg"
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("ScreenWindow snapshot", link))
+            Toast.makeText(this, "Skopiowano link do aktualnej klatki", Toast.LENGTH_SHORT).show()
         })
         createRoomCode()
 
@@ -136,9 +145,21 @@ class MainActivity : Activity() {
     }
 
     private fun createRoomCode() {
-        roomCode = "00000000000000000000000000000001"
+        val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+        val saved = prefs.getString("stream_room", null)
+        roomCode = if (saved != null && saved.matches(Regex("[a-f0-9]{32}"))) {
+            saved
+        } else {
+            val bytes = ByteArray(16)
+            SecureRandom().nextBytes(bytes)
+            bytes.joinToString("") { "%02x".format(it.toInt() and 0xff) }.also {
+                prefs.edit().putString("stream_room", it).apply()
+            }
+        }
         if (::roomCodeView.isInitialized) {
-            roomCodeView.text = "POKÓJ PUBLICZNY\nLink: $playerBase"
+            roomCodeView.text = "PRYWATNY POKÓJ\nLink do podglądu: $playerBase$roomCode\n" +
+                "Link do klatki: $snapshotBase$roomCode.jpg\n" +
+                "Każdy z linkiem może obejrzeć ekran podczas transmisji."
         }
     }
 
