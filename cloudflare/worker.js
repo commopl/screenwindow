@@ -22,9 +22,19 @@ if(saved)connect(saved);
 </script></main></html>`;
 
 export class RoomHub {
-  constructor(ctx, env) { this.ctx = ctx; this.env = env; }
+  constructor(ctx, env) { this.ctx = ctx; this.env = env; this.latestFrame = null; this.latestFrameAt = 0; }
   async fetch(request) {
     const url = new URL(request.url);
+    if (url.pathname === '/snapshot' && request.method === 'GET') {
+      if (!this.latestFrame || Date.now() - this.latestFrameAt > 10000) {
+        return new Response('Brak aktualnej klatki. Uruchom transmisje w ScreenWindow.', {
+          status: 503, headers: {'content-type':'text/plain; charset=utf-8','cache-control':'no-store'}
+        });
+      }
+      return new Response(this.latestFrame.slice(0), {
+        headers: {'content-type':'image/jpeg','cache-control':'no-store','x-content-type-options':'nosniff'}
+      });
+    }
     if (url.pathname !== '/socket') return new Response('Not found', {status:404});
     if (request.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket required', {status:426});
     const role = url.searchParams.get('role');
@@ -50,7 +60,11 @@ export class RoomHub {
       for (const viewer of this.ctx.getWebSockets('viewer')) { try { viewer.send(message); } catch {} }
       return;
     }
-    if (message.byteLength > 600000) return;
+    if (message.byteLength > 600000 || message.byteLength < 4) return;
+    const jpeg = new Uint8Array(message);
+    if (jpeg[0] !== 0xff || jpeg[1] !== 0xd8) return;
+    this.latestFrame = message.slice(0);
+    this.latestFrameAt = Date.now();
     for (const viewer of this.ctx.getWebSockets('viewer')) { try { viewer.send(message); } catch {} }
   }
   webSocketClose(ws, code, reason) {
@@ -65,6 +79,12 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/' || url.pathname === '/watch' || url.pathname === '/public') return new Response(PLAYER_HTML, {headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}});
+    const snapshot = url.pathname.match(/^\/snapshot\/([a-f0-9]{32})\.jpg$/i);
+    if (snapshot) {
+      if (request.method !== 'GET') return new Response('Method not allowed', {status:405});
+      const id = env.ROOMS.idFromName(snapshot[1].toLowerCase());
+      return env.ROOMS.get(id).fetch(new Request(new URL('/snapshot', request.url), {method:'GET'}));
+    }
     const match = url.pathname.match(/^\/ws\/([a-f0-9]{32})$/i);
     if (!match) return new Response('ScreenWindow stream server', {headers:{'content-type':'text/plain'}});
     const room = match[1].toLowerCase();
