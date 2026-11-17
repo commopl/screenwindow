@@ -140,6 +140,8 @@ class MirrorService : Service() {
                 }
             }.also { newProjection.registerCallback(it, handler) }
             showOverlay()
+            // Start the first capture surface immediately. Resize callbacks alone may never fire.
+            setupCaptureReader()
         } catch (e: Exception) {
             Log.e(TAG, "MediaProjection start failed", e)
             Toast.makeText(this, "Podgląd nie wystartował: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
